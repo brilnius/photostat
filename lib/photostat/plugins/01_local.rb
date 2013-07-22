@@ -23,6 +23,7 @@ module Photostat
         opt :tags, "List of tags to classify imported pictures", :type => :strings
         opt :visibility, "Choices are 'private', 'protected' and 'public'", :required => true, :type => :string
         opt :move, "Move, instead of copy (better performance, defaults to false, careful)", :type => :boolean
+        opt :link, "Make symbolic links, instead of copy/move (defaults to false)", :type => :boolean
         opt :dry, "Just fake it and print the resulting files", :type => :boolean
       end
 
@@ -90,8 +91,21 @@ module Photostat
 
         unless opts[:dry]
           mkdir_p dest_dir
-          cp fpath, dest_path unless opts[:move]
-          mv fpath, dest_path if opts[:move]
+          if opts[:link]
+            begin
+              wd = getwd
+              chdir File.dirname(dest_path)
+              ln_s File.expand_path(fpath), File.basename(dest_path)
+              chdir wd
+            rescue Errno::EPERM,NotImplementedError => e
+              puts "symlink is not implemented, --link flag cannot be used"
+              exit 1
+            end
+          elsif opts[:move]
+            mv fpath, dest_path
+          else
+            cp fpath, dest_path
+          end
         end
       end
 
