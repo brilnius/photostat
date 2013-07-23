@@ -186,9 +186,15 @@ module Photostat
         options[:tags]  = 'sync checksum:md5=' + obj[:md5]
         options[:safety_level] = '1'
         options[:content_type] = '1'
+
         options[:is_family] = '0'
         options[:is_friend] = '0'
         options[:is_public] = '0'
+        if obj[:visibility] == 'public'
+          options[:is_public] = '1'
+        elsif obj[:visibility] == 'protected'
+          options[:is_family] = '1'
+        end
         options[:hidden] = '2'
 
         begin
