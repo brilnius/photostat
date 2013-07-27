@@ -181,8 +181,12 @@ module Photostat
 
         src_path = File.join(config[:repository_path], obj[:local_path])
 
+        # See http://www.flickr.com/services/api/upload.api.html
         options = {}
         options[:title] = obj[:uid]
+        if not obj[:orig_name].nil?
+          options[:title] = obj[:orig_name]
+        end
         options[:tags]  = 'sync checksum:md5=' + obj[:md5]
         options[:safety_level] = '1'
         options[:content_type] = '1'
@@ -190,12 +194,13 @@ module Photostat
         options[:is_family] = '0'
         options[:is_friend] = '0'
         options[:is_public] = '0'
+        options[:hidden] = '2'
+
         if obj[:visibility] == 'public'
           options[:is_public] = '1'
         elsif obj[:visibility] == 'protected'
           options[:is_family] = '1'
         end
-        options[:hidden] = '2'
 
         begin
           photoid = flickr.upload_photo(src_path, options)

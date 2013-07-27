@@ -24,6 +24,8 @@ module Photostat
         opt :visibility, "Choices are 'private', 'protected' and 'public'", :required => true, :type => :string
         opt :move, "Move, instead of copy (better performance, defaults to false, careful)", :type => :boolean
         opt :link, "Make symbolic links, instead of copy/move (defaults to false)", :type => :boolean
+        opt :keeppath, "Keep relative path from given directory", :type => :string
+        opt :keepname, "Keep the original filename", :type => :boolean
         opt :dry, "Just fake it and print the resulting files", :type => :boolean
       end
 
@@ -69,6 +71,25 @@ module Photostat
 
         photo = @db[:photos].where(:uid => uid).first
         photo_id = photo ? photo[:id] : nil
+        
+        orig_path = nil
+        if not opts[:keeppath].nil?
+          if File.dirname(fpath) =~ /^#{Regexp.escape(opts[:keeppath])}/
+            orig_path = $'
+          elsif File.dirname(fpath) =~ /^#{Regexp.escape(File.expand_path(opts[:keeppath]))}/
+            orig_path = $'
+          elsif File.dirname(File.expand_path(fpath)) =~ /^#{Regexp.escape(opts[:keeppath])}/
+            orig_path = $'
+          elsif File.dirname(File.expand_path(fpath)) =~ /^#{Regexp.escape(File.expand_path(opts[:keeppath]))}/
+            orig_path = $'
+          else
+            puts "Could not build relative path of #{fpath} from #{opts[:keeppath]}"
+          end
+          orig_path = orig_path.gsub(/^[\/\\]+/,'').gsub(/[\/\\]+$/,'')
+        end
+        
+        orig_name = nil
+        orig_name = File.basename(fpath) if opts[:keepname]      
 
         unless photo || opts[:dry]
           photo_id = @db[:photos].insert(
@@ -76,6 +97,9 @@ module Photostat
             :type => type,
             :local_path => local_path,
             :visibility => opts[:visibility],
+            :has_flickr_upload => false,
+            :orig_path => orig_path,
+            :orig_name => orig_name,
             :created_at => dt,
           )
         end
