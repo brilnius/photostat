@@ -57,8 +57,12 @@ module Photostat
 
       return [] unless File.directory? current
 
+      match = nil
       match = options[:match] if options
+      not_match = nil
       not_match = options[:not_match] if options
+      not_match_dir = nil
+      not_match_dir = options[:not_match_dir] if options
       non_recursive = options[:non_recursive]
       is_abs = options[:absolute?] or false
 
@@ -78,7 +82,8 @@ module Photostat
             yield yielded if block_given?
           end
 
-          dirs.push path if !non_recursive and File.directory? path 
+          dirs.push path if !non_recursive and File.directory? path and
+            (not_match_dir.nil? or name !~ not_match_dir)
         end
 
         current = dirs.pop

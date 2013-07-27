@@ -26,6 +26,8 @@ module Photostat
         opt :link, "Make symbolic links, instead of copy/move (defaults to false)", :type => :boolean
         opt :keeppath, "Keep relative path from given directory", :type => :string
         opt :keepname, "Keep the original filename", :type => :boolean
+        opt :exclude, "List of patterns for file to exclude", :type => :strings
+        opt :excludedir, "List of patterns for directories to exclude", :type => :strings
         opt :dry, "Just fake it and print the resulting files", :type => :boolean
       end
 
@@ -38,7 +40,16 @@ module Photostat
       source = File.expand_path opts[:path] 
       config = Photostat.config
 
-      files = files_in_dir(source, :match => /(.jpe?g|.mov)$/i, :absolute? => true)
+      not_match = nil
+      if not opts[:exclude].nil?
+        not_match = Regexp.new('(' + opts[:exclude].join(')|(') + ')')
+      end
+      not_match_dir = nil
+      if not opts[:excludedir].nil?
+        not_match_dir = Regexp.new('(' + opts[:excludedir].join(')|(') + ')')
+      end
+      files = files_in_dir(source, :match => /(.jpe?g|.mov)$/i, :absolute? => true,
+        :not_match => not_match, :not_match_dir=> not_match_dir)
       count, total = 0, files.length
       puts
 
