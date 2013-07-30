@@ -1,7 +1,7 @@
 Photostat
 =========
 
-For managing photos, like a hacker. It is already usable for me, but
+For managing photos, like a hacker. It is already usable for me (Alexandru), but
 work is still in progress and I don't recommend it to people yet.
 
 Here's what this app currently does:
@@ -25,3 +25,15 @@ Now I'm working on Flickr integration, Picasa coming next.
 
 I want 2 cheap cloud backups and a properly managed local repository.
 These photos are too important for me.
+
+
+Additions from Brilnius
+-----------------------
+
+Maybe I (Brilnius) have a more organised local photo repository: the photos are already in sub-directories like "2012/07-14 A Good Week-End/Day 1". So I didn't want to loose this organisation. And also I didn't want to loose the filenames of the pictures.
+
+So I added these options:
+
+* `--keepname` option in local:import, so the uploaded photo in Flickr keeps the same name as the original file
+* `--keeppath` option in local:import, so the relative path (from a given directory) is kept. The uploaded photo will be placed in a Flickr photoset whose name is this relative path (e.g. "2012/07-14 A Good Week-End/Day 1")
+* `--exclude` and `excludedir` options in local:import, to be able to specify photos we don't want to backup (e.g. `--excludedir Originals Trash`)
