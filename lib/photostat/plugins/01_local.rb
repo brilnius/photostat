@@ -83,22 +83,31 @@ module Photostat
         photo = @db[:photos].where(:uid => uid).first
         photo_id = photo ? photo[:id] : nil
         
+        # Keep original relative path, if required
+        # Find base path (keeppath arg value) in the file path
         orig_path = nil
         if not opts[:keeppath].nil?
-          if File.dirname(fpath) =~ /^#{Regexp.escape(opts[:keeppath])}/
-            orig_path = $'
-          elsif File.dirname(fpath) =~ /^#{Regexp.escape(File.expand_path(opts[:keeppath]))}/
-            orig_path = $'
-          elsif File.dirname(File.expand_path(fpath)) =~ /^#{Regexp.escape(opts[:keeppath])}/
-            orig_path = $'
-          elsif File.dirname(File.expand_path(fpath)) =~ /^#{Regexp.escape(File.expand_path(opts[:keeppath]))}/
-            orig_path = $'
-          else
-            puts "Could not build relative path of #{fpath} from #{opts[:keeppath]}"
+          lookup_pairs = [
+                   [fpath,                   opts[:keeppath]],
+                   [fpath,                   File.expand_path(opts[:keeppath])],
+                   [File.expand_path(fpath), opts[:keeppath]],
+                   [File.expand_path(fpath), File.expand_path(opts[:keeppath])],
+                  ]
+          lookup_pairs.each do |filepath, basepath|
+            if File.dirname(filepath) =~ /^#{Regexp.escape(basepath)}/
+              orig_path = $'
+              break
+            end
           end
-          orig_path = orig_path.gsub(/^[\/\\]+/,'').gsub(/[\/\\]+$/,'')
+          if orig_path.nil?
+            puts "Could not build relative path of #{fpath} from #{opts[:keeppath]}"
+          else
+            # Remove heading/trailing slashes
+            orig_path = orig_path.gsub(/^[\/\\]+/,'').gsub(/[\/\\]+$/,'')
+          end
         end
         
+        # Keep original file name, if required
         orig_name = nil
         orig_name = File.basename(fpath) if opts[:keepname]      
 
