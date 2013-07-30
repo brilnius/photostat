@@ -8,6 +8,7 @@ module Photostat
     exposes :config, "Configures Flickr login"
     exposes :sync, "Uploads local photos to Flickr, downloads Flickr tags / visibility info"
     exposes :export, "Exports web page with thumbnails/links of your public Flickr photos"
+    exposes :list, "List existing Flickr sets"
 
     def activate!
       return if @activated
@@ -34,6 +35,8 @@ module Photostat
 
       Photostat::DB.migrate!
       @db = Photostat::DB.instance
+
+      @photosets = nil
     end
 
     def update_md5_info_on_files!
@@ -203,17 +206,84 @@ module Photostat
         end
 
         begin
-          photoid = flickr.upload_photo(src_path, options)
-        rescue
-          sleep 5
-          # retrying again
-          photoid = flickr.upload_photo(src_path, options)
+          photoid = nil
+          multi_attempt {
+            photoid = flickr.upload_photo(src_path, options)
+          }
+          
+          if not obj[:orig_path].nil?
+            photoset_title = obj[:orig_path]
+            photoset_id = photoset(photoset_title, photoid)
+            flickr.photosets.addPhoto(:photoset_id => photoset_id, :photo_id => photoid) unless photoset_id.nil?
+          end
+        rescue => e
+          puts "\nUpload of photo failed: #{src_path} (#{e.class} #{e.message})"
         end
       end
-
+ 
       puts "\n"
     end
 
+    def list
+      activate!
+      #puts "--- Gallerie list ---"
+      #resp = flickr.galleries.getList
+      #list = resp["gallery"]
+      #puts "#{resp["total"]} gallerie(s)"
+      #list.each do |item|
+      #  puts "- id:#{item['id']}, title:#{item['title']}, description:#{item['description']}, count_photos:#{item['count_photos']}"
+      #end
+      puts "--- Photosets list ---"
+      list = flickr.photosets.getList
+      puts "#{list.size} photoset(s)"
+      list.each do |item|
+        puts "- id:#{item['id']}, title:#{item['title']}, description:#{item['description']}, photos:#{item['photos']}"
+      end
+      puts "--- Collection list ---"
+      list = flickr.collections.getTree
+      puts "#{list.size} collection(s)"
+       list.each do |item|
+        puts "- id:#{item['id']}, title:#{item['title']}, description:#{item['description']}, sets:#{item['set'].size}"
+      end
+    end
+
+    def photoset(title, photoid)
+      if @photosets.nil?
+        # Get photoset list
+        sets = flickr.photosets.getList
+        @photosets = {}
+        sets.each do |set|
+          next if set['title'].nil?
+          @photosets[set['title']] = set['id']
+        end
+      end
+      if @photosets[title].nil?
+        # Create photoset if not found
+        resp = flickr.photosets.create(:title => title, :primary_photo_id =>photoid )
+        @photosets[title] = resp["id"]
+        STDOUT.puts "\n - created photoset #{title}"
+        STDOUT.flush
+        return nil # the first photo was already put in the photoset
+      end
+      @photosets[title]
+    end
+
+    def multi_attempt
+      raise 'Bug: block missing' if not block_given?
+
+      attempt_left = 2
+      while attempt_left > 0 do
+        attempt_left -= 1
+        begin
+          yield()
+          break
+        rescue
+          raise unless attempt_left > 0
+          sleep 5
+        end
+      end
+    end
+          
     def config
       puts
       config_file = File.expand_path "~/.photostat"
